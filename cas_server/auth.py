@@ -322,7 +322,6 @@ class LdapAuthUser(DBAuthUser):  # pragma: no cover
         """
         if settings.CAS_LDAP_BIND:
             try:
-                logger.info(str(self.user))
                 ldap3.Connection(
                     settings.CAS_LDAP_SERVER,
                     self.user["dn"],
@@ -349,6 +348,19 @@ class LdapAuthUser(DBAuthUser):  # pragma: no cover
                 )
             else:
                 return False
+
+    def attributs(self):
+        """
+            The user attributes, as returned by the CAS backend.
+
+            :return: :obj:`FederatedUser.attributs<cas_server.models.FederatedUser.attributs>`.
+                If the user do not exists, the returned :class:`dict` is empty.
+            :rtype: dict
+        """
+        if not self.user:  # pragma: no cover (should not happen)
+            return {}
+        else:
+            return self.user
 
 
 class DjangoAuthUser(AuthUser):  # pragma: no cover
