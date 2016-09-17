@@ -16,14 +16,18 @@ from django.utils import timezone
 from django.db import connections, DatabaseError
 
 import warnings
+import logging
 from datetime import timedelta
 from six.moves import range
+
+#: logger facility
+logger = logging.getLogger(__name__)
+
 try:  # pragma: no cover
     import MySQLdb
     import MySQLdb.cursors
 except ImportError:
     MySQLdb = None
-
 
 try:  # pragma: no cover
     import ldap3
@@ -294,6 +298,7 @@ class LdapAuthUser(DBAuthUser):  # pragma: no cover
                     attributes=ldap3.ALL_ATTRIBUTES
                 ) and len(conn.entries) == 1:
                     user = conn.entries[0].entry_get_attributes_dict()
+                    user["dn"] = conn.entries[0].entry_get_dn()
                     if user.get(settings.CAS_LDAP_USERNAME_ATTR):
                         self.user = user
                         super(LdapAuthUser, self).__init__(user[settings.CAS_LDAP_USERNAME_ATTR][0])
@@ -308,22 +313,42 @@ class LdapAuthUser(DBAuthUser):  # pragma: no cover
 
     def test_password(self, password):
         """
-            Tests ``password`` agains the user password.
+            Tests ``password`` against the user-supplied password.
 
             :param unicode password: a clear text password as submited by the user.
             :return: ``True`` if :attr:`username<AuthUser.username>` is valid and ``password`` is
                 correct, ``False`` otherwise.
             :rtype: bool
         """
-        if self.user and self.user.get(settings.CAS_LDAP_PASSWORD_ATTR):
-            return check_password(
-                settings.CAS_LDAP_PASSWORD_CHECK,
-                password,
-                self.user[settings.CAS_LDAP_PASSWORD_ATTR][0],
-                settings.CAS_LDAP_PASSWORD_CHARSET
-            )
+        if settings.CAS_LDAP_BIND:
+            try:
+                logger.info(str(self.user))
+                ldap3.Connection(
+                    settings.CAS_LDAP_SERVER,
+                    self.user["dn"],
+                    password,
+                    auto_bind=True
+                )
+            except ldap3.LDAPBindError:
+                logger.info("Bind failed for user with DN: %s" % self.user["dn"])
+                return False
+            except Exception as e:
+                logger.info("Something else went wrong.")
+                logging.exception(e)
+
+            logger.info("Successful bind operation for DN: %s" % self.user["dn"])
+            return True
+
         else:
-            return False
+            if self.user and self.user.get(settings.CAS_LDAP_PASSWORD_ATTR):
+                return check_password(
+                    settings.CAS_LDAP_PASSWORD_CHECK,
+                    password,
+                    self.user[settings.CAS_LDAP_PASSWORD_ATTR][0],
+                    settings.CAS_LDAP_PASSWORD_CHARSET
+                )
+            else:
+                return False
 
 
 class DjangoAuthUser(AuthUser):  # pragma: no cover

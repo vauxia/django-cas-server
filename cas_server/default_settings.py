@@ -142,11 +142,13 @@ CAS_LDAP_USER_QUERY = "(uid=%s)"
 CAS_LDAP_USERNAME_ATTR = "uid"
 #: LDAP attribute used for users passwords
 CAS_LDAP_PASSWORD_ATTR = "userPassword"
-#: The method used to check the user password. Must be one of ``"crypt"``, ``"ldap"``,
-#: ``"hex_md5"``, ``"hex_sha1"``, ``"hex_sha224"``, ``"hex_sha256"``, ``"hex_sha384"``,
-#: ``"hex_sha512"``, ``"plain"``.
+#: After finding user's DN, Verify the password by attempting a bind.
+CAS_LDAP_BIND = True
+#: If not using bind authentication, the method used to check the user password.
+#: Must be one of ``"crypt"``, ``"ldap"``, ``"hex_md5"``, ``"hex_sha1"``,
+#: ``"hex_sha224"``, ``"hex_sha256"``, ``"hex_sha384"``, ``"hex_sha512"``, ``"plain"``.
 CAS_LDAP_PASSWORD_CHECK = "ldap"
-#: charset the LDAP users passwords was hash with
+#: If not using bind authentiction, charset the LDAP user's password was hashed with
 CAS_LDAP_PASSWORD_CHARSET = "utf-8"
 
 
